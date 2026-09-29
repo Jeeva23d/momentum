@@ -1495,7 +1495,7 @@ function renderExtras(d){
   moods.forEach((m,i)=>{const s=document.createElement('span');s.textContent=m;if(d.mood===i+1)s.className='sel';
     s.onclick=()=>{d.mood=i+1;save();renderToday();};mr.appendChild(s);});
   // Badges
-  renderBadges();
+  renderTodayBadges();
 }
 function dsa(n){const d=day(current);d.dsa=Math.max(0,(d.dsa||0)+n);save();renderToday();
   if(n>0&&d.dsa===1)toast('Nice! Problem solved 💻');}
@@ -1605,7 +1605,7 @@ const BADGES=[
   {ic:'🏆',name:'Perfect Day',test:()=>Object.keys(data.days).some(k=>activeHabits().length&&habitsDone(k)===activeHabits().length)},
   {ic:'🎯',name:'Roadmap Done',test:()=>Array.isArray(data.roadItems)&&data.roadItems.length>0&&data.roadItems.every(r=>r.done)}
 ];
-function renderBadges(){
+function renderTodayBadges(){
   const row=document.getElementById('badgeRow');if(!row)return;row.innerHTML='';
   BADGES.forEach(b=>{const un=b.test();const el=document.createElement('div');
     el.className='badge-item '+(un?'unlocked':'locked');
@@ -2288,6 +2288,7 @@ function renderHome(){
   else{h('homeWeightEmpty').style.display='';if(charts['homeWeightChart']){charts['homeWeightChart'].destroy();delete charts['homeWeightChart'];}}
 }
 function renderBadges(box){
+  if(!box)return;
   const streak=calcStreak(),best=bestStreak(),active=Object.keys(data.days).filter(k=>habitsDone(k)>0).length;
   const dsaSolved=Object.values(data.dsaSolved).filter(Boolean).length,hours=totalStudyMin()/60,money=data.money.entries.length;
   const defs=[[streak>=1,'🔥 First Day'],[streak>=7,'📅 7-day Streak'],[streak>=30,'🏆 30-day Streak'],
