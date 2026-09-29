@@ -1380,12 +1380,19 @@ async function setupCloud(){
   localStorage.setItem('cloudCfg',JSON.stringify({url:url.trim().replace(/\/$/,''),key:key.trim()}));
   toast('Connecting to your cloud database…');
   try{
-    data=applyDefaults(await cloudLoad());await cloudSave();
-    serverOk=true;storeMode='cloud';renderAll();
+    let remote;
+    try{ remote=await cloudLoad(); }
+    catch(e){ throw new Error('READ: '+(e&&e.message?e.message:e)); }
+    data=applyDefaults(remote);
+    try{ await cloudSave(); }
+    catch(e){ throw new Error('WRITE: '+(e&&e.message?e.message:e)); }
+    serverOk=true;storeMode='cloud';
+    try{ renderAll(); }
+    catch(e){ throw new Error('RENDER: '+(e&&e.message?e.message:e)); }
     toast('☁️ Cloud database connected! Your data now syncs online.');
   }catch(e){
     const msg=(e&&e.message)?e.message:String(e);
-    toast('⚠️ Could not connect: '+msg);
+    alert('Could not connect:\n\n'+msg);
     console.error('Cloud connect failed:',e);
   }
 }
