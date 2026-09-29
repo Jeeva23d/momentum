@@ -1,0 +1,14 @@
+{
+  "name": "Momentum — Life Tracker",
+  "short_name": "Momentum",
+  "description": "Personal tracker for Learning, Health & Wealth",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#070a18",
+  "theme_color": "#070a18",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

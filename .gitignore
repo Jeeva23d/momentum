@@ -1,0 +1,11 @@
+# build output / databases — never upload these
+bin/
+obj/
+*.db
+*.db-shm
+*.db-wal
+
+# OS / editor junk
+Thumbs.db
+.DS_Store
+.vscode/
