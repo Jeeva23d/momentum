@@ -1384,7 +1384,9 @@ async function setupCloud(){
     serverOk=true;storeMode='cloud';renderAll();
     toast('☁️ Cloud database connected! Your data now syncs online.');
   }catch(e){
-    toast('⚠️ Could not connect. Check the URL/key and that you ran the setup SQL.');
+    const msg=(e&&e.message)?e.message:String(e);
+    toast('⚠️ Could not connect: '+msg);
+    console.error('Cloud connect failed:',e);
   }
 }
 function day(dt){if(!data.days[dt])data.days[dt]={};return data.days[dt];}

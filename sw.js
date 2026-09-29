@@ -1,4 +1,4 @@
-const CACHE = 'momentum-v3';
+const CACHE = 'momentum-v4';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon.svg'];
 
 self.addEventListener('install', e => {
@@ -15,6 +15,9 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
+  // Only ever touch same-origin requests. Cross-origin calls (e.g. the Supabase
+  // cloud database) must go straight to the network untouched.
+  if (url.origin !== self.location.origin) return;
   // Never cache the live database API — always go to network, fall back to cache when offline.
   if (url.pathname.startsWith('/api/')) {
     e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
