@@ -804,7 +804,7 @@ canvas{max-width:100%}
         <input id="mNote" placeholder="e.g. lunch with friends" style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--glass-brd);background:rgba(0,0,0,.25);color:var(--text)" onkeydown="if(event.key==='Enter')addMoney()" />
         <div class="fieldlabel">Date (leave empty for today)</div>
         <input type="date" id="mDate" style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--glass-brd);background:rgba(0,0,0,.25);color:var(--text)" />
-        <button class="btn primary" style="width:100%;margin-top:16px" onclick="addMoney()">➕ Add to Tracker</button>
+        <button class="btn primary" id="moneySaveBtn" style="width:100%;margin-top:16px" onclick="addMoney()">➕ Add to Tracker</button>
       </div>
     </div>
 
@@ -990,7 +990,7 @@ canvas{max-width:100%}
         <input id="insNominee" placeholder="Nominee (optional)" />
       </div>
       <input id="insNote" placeholder="Notes (optional)" style="width:100%;margin-top:8px" />
-      <button class="btn primary" style="width:100%;margin-top:12px" onclick="addInsurance()">🛡️ Save Policy</button>
+      <button class="btn primary" id="insSaveBtn" style="width:100%;margin-top:12px" onclick="addInsurance()">🛡️ Save Policy</button>
     </div>
 
     <div class="glass" style="margin-top:16px">
@@ -1555,6 +1555,11 @@ function updBookPage(id,val){const b=data.books.find(x=>x.id===id);if(!b)return;
   save();renderBooks();}
 function rateBook(id,r){const b=data.books.find(x=>x.id===id);if(!b)return;b.rating=(b.rating===r)?0:r;save();renderBooks();}
 function delBook(id){if(!confirm('Remove this book from your library?'))return;data.books=data.books.filter(x=>x.id!==id);save();renderBooks();}
+function editBook(id){const b=data.books.find(x=>x.id===id);if(!b)return;
+  const t=prompt('Book title:',b.title||'');if(t===null)return;const nt=t.trim();if(!nt){toast('Title cannot be empty');return;}
+  const au=prompt('Author:',b.author||'');if(au===null)return;
+  const tot=prompt('Total pages (optional):',b.total||'');if(tot===null)return;
+  b.title=nt;b.author=au.trim();b.total=+tot||0;save();renderBooks();toast('Book updated ✏️');}
 function renderBooks(){
   const list=document.getElementById('bookList');if(!list)return;
   if(!Array.isArray(data.books))data.books=[];
@@ -1585,6 +1590,7 @@ function renderBooks(){
       (b.status!=='reading'?`<button class="chip" onclick="setBookStatus('${b.id}','reading')">📖 Reading</button>`:'')+
       (b.status!=='done'?`<button class="chip" onclick="setBookStatus('${b.id}','done')">✅ Done</button>`:'')+
       (b.status!=='want'?`<button class="chip" onclick="setBookStatus('${b.id}','want')">📌 Later</button>`:'')+
+      `<button class="chip" onclick="editBook('${b.id}')">✎ Edit</button>`+
       `<button class="chip" onclick="delBook('${b.id}')">🗑️</button></div></div>`+
       (b.finished?`<div class="mini" style="text-align:left;margin-top:6px">✅ Finished on ${b.finished}</div>`:'');
     list.appendChild(card);
@@ -1958,7 +1964,8 @@ function renderMoney(){
     const sign=e.type==='in'?'+':'−',col=e.type==='in'?'var(--green)':'#ff8a8a';
     const meta=[e.cat,e.method].filter(Boolean).join(' · ');
     const cat=meta?`<em style="color:var(--muted);font-size:.75rem">[${meta}]</em> `:'';
-    li.innerHTML=`<span style="color:${col};font-weight:700;min-width:72px">${sign}${inr(e.amount)}</span><span style="flex:1">${cat}${(e.note||'').replace(/</g,'&lt;')||(e.type==='in'?'Income':'Expense')} <em style="color:var(--muted);font-size:.78rem">${e.date}</em></span><button class="del">✕</button>`;
+    li.innerHTML=`<span style="color:${col};font-weight:700;min-width:72px">${sign}${inr(e.amount)}</span><span style="flex:1">${cat}${(e.note||'').replace(/</g,'&lt;')||(e.type==='in'?'Income':'Expense')} <em style="color:var(--muted);font-size:.78rem">${e.date}</em></span><button class="edit">✎</button><button class="del">✕</button>`;
+    li.querySelector('.edit').onclick=()=>editMoney(e.id);
     li.querySelector('.del').onclick=()=>{m.entries=m.entries.filter(x=>x.id!==e.id);save();renderMoney();};
     ml.appendChild(li);
   });
@@ -1971,8 +1978,9 @@ function renderMoney(){
   m.loans.slice().reverse().forEach(l=>{
     const li=document.createElement('li');if(l.status==='settled')li.className='done';
     const tag=l.dir==='given'?'<span style="color:var(--green)">to collect 💸</span>':'<span style="color:#ff8a8a">to repay 🏦</span>';
-    li.innerHTML=`<div class="tk">${l.status==='settled'?'✓':''}</div><span style="flex:1"><b>${inr(l.amount)}</b> ${l.dir==='given'?'to':'from'} ${(l.person||'?').replace(/</g,'&lt;')} — ${tag} <em style="color:var(--muted);font-size:.75rem">${l.date}</em></span><button class="del">✕</button>`;
+    li.innerHTML=`<div class="tk">${l.status==='settled'?'✓':''}</div><span style="flex:1"><b>${inr(l.amount)}</b> ${l.dir==='given'?'to':'from'} ${(l.person||'?').replace(/</g,'&lt;')} — ${tag} <em style="color:var(--muted);font-size:.75rem">${l.date}</em></span><button class="edit">✎</button><button class="del">✕</button>`;
     li.querySelector('.tk').onclick=()=>{l.status=l.status==='settled'?'pending':'settled';save();renderMoney();if(l.status==='settled')toast('Loan settled ✓');};
+    li.querySelector('.edit').onclick=()=>editLoan(l.id);
     li.querySelector('.del').onclick=()=>{m.loans=m.loans.filter(x=>x.id!==l.id);save();renderMoney();};
     ll.appendChild(li);
   });
@@ -1980,7 +1988,8 @@ function renderMoney(){
   const il=document.getElementById('investList');il.innerHTML='';
   m.invest.slice().reverse().forEach(e=>{
     const li=document.createElement('li');
-    li.innerHTML=`<span style="color:var(--green);font-weight:700;min-width:72px">${inr(e.amount)}</span><span style="flex:1">${(e.fund||'SIP').replace(/</g,'&lt;')} <em style="color:var(--muted);font-size:.78rem">${e.date}</em></span><button class="del">✕</button>`;
+    li.innerHTML=`<span style="color:var(--green);font-weight:700;min-width:72px">${inr(e.amount)}</span><span style="flex:1">${(e.fund||'SIP').replace(/</g,'&lt;')} <em style="color:var(--muted);font-size:.78rem">${e.date}</em></span><button class="edit">✎</button><button class="del">✕</button>`;
+    li.querySelector('.edit').onclick=()=>editInvest(e.id);
     li.querySelector('.del').onclick=()=>{m.invest=m.invest.filter(x=>x.id!==e.id);save();renderMoney();};
     il.appendChild(li);
   });
@@ -2010,8 +2019,9 @@ function renderBills(){
       else if(info.diff<=3)pill=`<span class="pill soon">due in ${info.diff}d</span>`;
       else pill=`<span class="pill">day ${info.day}</span>`;
     li.innerHTML=`<span style="flex:1"><b>${inr(b.amount)}</b> ${(b.name||'Bill').replace(/</g,'&lt;')} <em style="color:var(--muted);font-size:.75rem">${b.cat||''}</em> ${pill}</span>`+
-      `<button class="btn ghost sm paybtn">${info.paid?'Undo':'Pay'}</button><button class="del">✕</button>`;
+      `<button class="btn ghost sm paybtn">${info.paid?'Undo':'Pay'}</button><button class="edit">✎</button><button class="del">✕</button>`;
     li.querySelector('.paybtn').onclick=()=>payBill(b.id);
+    li.querySelector('.edit').onclick=()=>editBill(b.id);
     li.querySelector('.del').onclick=()=>{data.money.bills=data.money.bills.filter(x=>x.id!==b.id);save();renderMoney();};
     ul.appendChild(li);
   });
@@ -2052,8 +2062,9 @@ function renderSavings(){
     card.innerHTML=`<div class="gt"><b>${(g.name||'Goal').replace(/</g,'&lt;')} ${done?'🎉':''}</b><span style="color:var(--muted);font-size:.8rem">${g.date?'🎯 '+g.date:''}</span></div>`+
       `<div class="bar" style="height:12px;background:rgba(255,255,255,.08);border-radius:20px;overflow:hidden"><i style="display:block;height:100%;width:${pct}%;background:linear-gradient(90deg,#22e6a5,#00e0ff);border-radius:20px;transition:width .8s"></i></div>`+
       `<div class="mini" style="text-align:left;margin-top:8px">${inr(g.saved||0)} of ${inr(g.target)} · ${inr(left)} to go · ${Math.round(pct)}%</div>`+
-      `<div style="display:flex;gap:8px;margin-top:10px"><button class="btn primary sm addc">+ Add money</button><button class="btn ghost sm delc">Delete</button></div>`;
+      `<div style="display:flex;gap:8px;margin-top:10px"><button class="btn primary sm addc">+ Add money</button><button class="btn ghost sm editc">✎ Edit</button><button class="btn ghost sm delc">Delete</button></div>`;
     card.querySelector('.addc').onclick=()=>{const v=+prompt('Add how much to "'+g.name+'"? ₹');if(v>0){g.saved=(+g.saved||0)+v;save();renderMoney();toast('Added 🐖');}};
+    card.querySelector('.editc').onclick=()=>editSaveGoal(g.id);
     card.querySelector('.delc').onclick=()=>{data.money.savings=data.money.savings.filter(x=>x.id!==g.id);save();renderMoney();};
     box.appendChild(card);});
 }
@@ -2078,10 +2089,12 @@ function renderNetWorth(){
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=inr(v);};
   set('assetTotal',c.aMan);set('assetInv',c.inv);set('assetLoan',c.collect);set('liabTotal',c.lMan);set('liabLoan',c.repay);
   const al=document.getElementById('assetList');if(al){al.innerHTML='';data.money.assets.slice().reverse().forEach(a=>{const li=document.createElement('li');
-    li.innerHTML=`<span style="color:#22e6a5;font-weight:700;min-width:80px">${inr(a.value)}</span><span style="flex:1">${(a.name||'').replace(/</g,'&lt;')}</span><button class="del">✕</button>`;
+    li.innerHTML=`<span style="color:#22e6a5;font-weight:700;min-width:80px">${inr(a.value)}</span><span style="flex:1">${(a.name||'').replace(/</g,'&lt;')}</span><button class="edit">✎</button><button class="del">✕</button>`;
+    li.querySelector('.edit').onclick=()=>editAsset(a.id);
     li.querySelector('.del').onclick=()=>{data.money.assets=data.money.assets.filter(x=>x.id!==a.id);save();renderMoney();};al.appendChild(li);});}
   const ll=document.getElementById('liabList');if(ll){ll.innerHTML='';data.money.liabilities.slice().reverse().forEach(a=>{const li=document.createElement('li');
-    li.innerHTML=`<span style="color:#ff8a8a;font-weight:700;min-width:80px">${inr(a.value)}</span><span style="flex:1">${(a.name||'').replace(/</g,'&lt;')}</span><button class="del">✕</button>`;
+    li.innerHTML=`<span style="color:#ff8a8a;font-weight:700;min-width:80px">${inr(a.value)}</span><span style="flex:1">${(a.name||'').replace(/</g,'&lt;')}</span><button class="edit">✎</button><button class="del">✕</button>`;
+    li.querySelector('.edit').onclick=()=>editLiab(a.id);
     li.querySelector('.del').onclick=()=>{data.money.liabilities=data.money.liabilities.filter(x=>x.id!==a.id);save();renderMoney();};ll.appendChild(li);});}
 }
 function addAsset(){const name=document.getElementById('assetName').value.trim();const val=+document.getElementById('assetVal').value||0;
@@ -2156,20 +2169,42 @@ function renderInsurance(){
       (p.nominee?`<span>🎗️ Nominee: <b>${p.nominee.replace(/</g,'&lt;')}</b></span>`:'')+
       (p.note?`<span>📝 <b>${p.note.replace(/</g,'&lt;')}</b></span>`:'')+
       `</div>`+
-      `<div style="display:flex;gap:8px;margin-top:12px"><button class="btn primary sm paid">✓ Paid — set next date</button><button class="btn ghost sm del2">Delete</button></div>`;
+      `<div style="display:flex;gap:8px;margin-top:12px"><button class="btn primary sm paid">✓ Paid — set next date</button><button class="btn ghost sm edit2">✎ Edit</button><button class="btn ghost sm del2">Delete</button></div>`;
     card.querySelector('.paid').onclick=()=>{p.next=advanceDue(p.next||todayStr(),p.freq);save();renderInsurance();toast('Premium paid — next date set ✓');};
+    card.querySelector('.edit2').onclick=()=>editInsurance(p.id);
     card.querySelector('.del2').onclick=()=>{if(confirm('Delete this policy?')){data.insurance=data.insurance.filter(x=>x.id!==p.id);save();renderInsurance();}};
     box.appendChild(card);
   });
 }
+let insEditId=null;
 function addInsurance(){
   const g=id=>document.getElementById(id);
   const name=g('insName').value.trim();if(!name){toast('Enter policy name');return;}
-  data.insurance.push({id:nid(),name,type:g('insType').value,insurer:g('insCompany').value.trim(),forWhom:g('insFor').value.trim(),
+  const rec={name,type:g('insType').value,insurer:g('insCompany').value.trim(),forWhom:g('insFor').value.trim(),
     policyNo:g('insPolicyNo').value.trim(),premium:+g('insPremium').value||0,freq:g('insFreq').value,sum:+g('insSum').value||0,
-    start:g('insStart').value,term:+g('insTerm').value||0,next:g('insNext').value,nominee:g('insNominee').value.trim(),note:g('insNote').value.trim()});
+    start:g('insStart').value,term:+g('insTerm').value||0,next:g('insNext').value,nominee:g('insNominee').value.trim(),note:g('insNote').value.trim()};
+  if(insEditId){
+    const p=data.insurance.find(x=>x.id===insEditId);
+    if(p)Object.assign(p,rec);
+    insEditId=null;g('insSaveBtn').textContent='🛡️ Save Policy';
+    toast('Policy updated ✏️');
+  }else{
+    data.insurance.push(Object.assign({id:nid()},rec));
+    toast('Policy saved 🛡️');
+  }
   ['insName','insCompany','insFor','insPolicyNo','insPremium','insSum','insStart','insTerm','insNext','insNominee','insNote'].forEach(i=>g(i).value='');
-  save();renderInsurance();toast('Policy saved 🛡️');
+  save();renderInsurance();
+}
+function editInsurance(idv){
+  const p=data.insurance.find(x=>x.id===idv);if(!p)return;
+  const g=id=>document.getElementById(id);
+  g('insName').value=p.name||'';g('insType').value=p.type||'❤️ Life';g('insCompany').value=p.insurer||'';
+  g('insFor').value=p.forWhom||'';g('insPolicyNo').value=p.policyNo||'';g('insPremium').value=p.premium||'';
+  g('insFreq').value=p.freq||'yearly';g('insSum').value=p.sum||'';g('insStart').value=p.start||'';
+  g('insTerm').value=p.term||'';g('insNext').value=p.next||'';g('insNominee').value=p.nominee||'';g('insNote').value=p.note||'';
+  insEditId=idv;g('insSaveBtn').textContent='💾 Update Policy';
+  g('insName').scrollIntoView({behavior:'smooth',block:'center'});
+  toast('Editing policy — change fields, then Update');
 }
 function setBudget(){data.money.dailyBudget=+document.getElementById('budgetInput').value||0;save();renderMoney();toast('Daily limit set 🚦');}
 function setSaveGoal(){data.money.goal=+document.getElementById('goalInput').value||0;save();renderMoney();toast('Savings goal set 🎯');}
@@ -2194,12 +2229,46 @@ function renderDayWise(){
   document.getElementById('dayWiseMonth').textContent=base.toLocaleString('en',{month:'long',year:'numeric'});
   const nx=document.getElementById('dwNext');if(nx)nx.style.visibility=dwOffset>=0?'hidden':'visible';
 }
+let moneyEditId=null;
 function addMoney(){const amt=+document.getElementById('mAmount').value||0;if(amt<=0){toast('Enter an amount');return;}
   const type=document.getElementById('mType').value,cat=document.getElementById('mCat').value,note=document.getElementById('mNote').value.trim();
   const method=document.getElementById('mMethod').value;
   const date=document.getElementById('mDate').value||todayStr();
-  data.money.entries.push({id:nid(),date,type,amount:amt,note,cat,method});
-  document.getElementById('mAmount').value='';document.getElementById('mNote').value='';document.getElementById('mDate').value='';save();renderMoney();toast('Saved 💵');}
+  if(moneyEditId){const e=data.money.entries.find(x=>x.id===moneyEditId);if(e)Object.assign(e,{date,type,amount:amt,note,cat,method});
+    moneyEditId=null;document.getElementById('moneySaveBtn').textContent='➕ Add to Tracker';toast('Transaction updated ✏️');}
+  else{data.money.entries.push({id:nid(),date,type,amount:amt,note,cat,method});toast('Saved 💵');}
+  document.getElementById('mAmount').value='';document.getElementById('mNote').value='';document.getElementById('mDate').value='';save();renderMoney();}
+function editMoney(idv){const e=data.money.entries.find(x=>x.id===idv);if(!e)return;const g=id=>document.getElementById(id);
+  g('mType').value=e.type||'out';g('mCat').value=e.cat||'🔁 Other';g('mMethod').value=e.method||'📱 UPI';
+  g('mAmount').value=e.amount||'';g('mNote').value=e.note||'';g('mDate').value=e.date||'';
+  moneyEditId=idv;g('moneySaveBtn').textContent='💾 Update Transaction';setMoneySub('add');
+  g('mAmount').scrollIntoView({behavior:'smooth',block:'center'});toast('Editing transaction — change fields, then Update');}
+function editLoan(idv){const l=data.money.loans.find(x=>x.id===idv);if(!l)return;
+  const person=prompt('Person / Bank:',l.person||'');if(person===null)return;
+  const amt=prompt('Amount ₹:',l.amount||'');if(amt===null)return;
+  l.person=person.trim();l.amount=+amt||0;save();renderMoney();toast('Loan updated ✏️');}
+function editInvest(idv){const e=data.money.invest.find(x=>x.id===idv);if(!e)return;
+  const fund=prompt('Fund / SIP name:',e.fund||'');if(fund===null)return;
+  const amt=prompt('Amount ₹:',e.amount||'');if(amt===null)return;
+  e.fund=fund.trim();e.amount=+amt||0;save();renderMoney();toast('Investment updated ✏️');}
+function editBill(idv){const b=data.money.bills.find(x=>x.id===idv);if(!b)return;
+  const name=prompt('Bill name:',b.name||'');if(name===null)return;
+  const amt=prompt('Amount ₹:',b.amount||'');if(amt===null)return;
+  const day=prompt('Due day of month (1-31):',b.dueDay||1);if(day===null)return;
+  b.name=name.trim();b.amount=+amt||0;b.dueDay=Math.min(Math.max(+day||1,1),31);save();renderMoney();toast('Bill updated ✏️');}
+function editSaveGoal(idv){const g=data.money.savings.find(x=>x.id===idv);if(!g)return;
+  const name=prompt('Goal name:',g.name||'');if(name===null)return;
+  const target=prompt('Target amount ₹:',g.target||'');if(target===null)return;
+  const date=prompt('Target date (yyyy-mm-dd, optional):',g.date||'');if(date===null)return;
+  g.name=name.trim();g.target=+target||0;g.date=date.trim();save();renderMoney();toast('Goal updated ✏️');}
+function editAsset(idv){const a=data.money.assets.find(x=>x.id===idv);if(!a)return;
+  const name=prompt('Asset name:',a.name||'');if(name===null)return;
+  const val=prompt('Value ₹:',a.value||'');if(val===null)return;
+  a.name=name.trim();a.value=+val||0;save();renderMoney();toast('Asset updated ✏️');}
+function editLiab(idv){const a=data.money.liabilities.find(x=>x.id===idv);if(!a)return;
+  const name=prompt('Liability name:',a.name||'');if(name===null)return;
+  const val=prompt('Value ₹:',a.value||'');if(val===null)return;
+  a.name=name.trim();a.value=+val||0;save();renderMoney();toast('Liability updated ✏️');}
 function addLoan(){const amt=+document.getElementById('loanAmount').value||0;if(amt<=0){toast('Enter an amount');return;}
   const dir=document.getElementById('loanDir').value,person=document.getElementById('loanPerson').value.trim();
   data.money.loans.push({id:nid(),date:todayStr(),dir,person,amount:amt,status:'pending'});
@@ -2221,8 +2290,9 @@ function renderCareer(){
     const li=document.createElement('li');
     const link=j.link?`<a href="${j.link}" target="_blank" style="color:var(--cyan,#00e0ff)">🔗</a>`:'';
     const opts=STAT.map(s=>`<option ${j.status===s?'selected':''}>${s}</option>`).join('');
-    li.innerHTML=`<span style="flex:1"><b>${(j.company||'').replace(/</g,'&lt;')}</b> — ${(j.role||'').replace(/</g,'&lt;')} ${link} <em style="color:var(--muted);font-size:.78rem">${j.date}</em></span><select class="jst" style="padding:6px;border-radius:8px;border:1px solid var(--glass-brd);background:rgba(0,0,0,.3);color:var(--text)">${opts}</select><button class="del">✕</button>`;
+    li.innerHTML=`<span style="flex:1"><b>${(j.company||'').replace(/</g,'&lt;')}</b> — ${(j.role||'').replace(/</g,'&lt;')} ${link} <em style="color:var(--muted);font-size:.78rem">${j.date}</em></span><select class="jst" style="padding:6px;border-radius:8px;border:1px solid var(--glass-brd);background:rgba(0,0,0,.3);color:var(--text)">${opts}</select><button class="edit">✎</button><button class="del">✕</button>`;
     li.querySelector('.jst').onchange=ev=>{j.status=ev.target.value;save();renderCareer();};
+    li.querySelector('.edit').onclick=()=>editJob(j.id);
     li.querySelector('.del').onclick=()=>{data.jobs=data.jobs.filter(x=>x.id!==j.id);save();renderCareer();};
     jl.appendChild(li);
   });
@@ -2230,15 +2300,17 @@ function renderCareer(){
   const gl=document.getElementById('goalList');gl.innerHTML='';
   gs.forEach(g=>{
     const li=document.createElement('li');if(g.done)li.className='done';
-    li.innerHTML=`<div class="tk">${g.done?'✓':''}</div><span>${g.text.replace(/</g,'&lt;')}</span><button class="del">✕</button>`;
+    li.innerHTML=`<div class="tk">${g.done?'✓':''}</div><span>${g.text.replace(/</g,'&lt;')}</span><button class="edit">✎</button><button class="del">✕</button>`;
     li.querySelector('.tk').onclick=()=>{g.done=!g.done;save();renderCareer();if(g.done)toast('Goal done! 🎯');};
+    li.querySelector('.edit').onclick=()=>editMonthGoal(mk,g.id);
     li.querySelector('.del').onclick=()=>{data.goals[mk]=gs.filter(x=>x.id!==g.id);save();renderCareer();};
     gl.appendChild(li);
   });
   const nl=document.getElementById('noteList');nl.innerHTML='';
   data.notes.slice().reverse().forEach(n=>{
     const li=document.createElement('li');
-    li.innerHTML=`<span style="flex:1">${n.text.replace(/</g,'&lt;')}</span><button class="del">✕</button>`;
+    li.innerHTML=`<span style="flex:1">${n.text.replace(/</g,'&lt;')}</span><button class="edit">✎</button><button class="del">✕</button>`;
+    li.querySelector('.edit').onclick=()=>editNote(n.id);
     li.querySelector('.del').onclick=()=>{data.notes=data.notes.filter(x=>x.id!==n.id);save();renderCareer();};
     nl.appendChild(li);
   });
@@ -2254,6 +2326,15 @@ function addMonthGoal(){const inp=document.getElementById('goalTextInput'),v=inp
   inp.value='';save();renderCareer();}
 function addNote(){const inp=document.getElementById('noteInput'),v=inp.value.trim();if(!v)return;
   data.notes.push({id:nid(),ts:Date.now(),text:v});inp.value='';save();renderCareer();}
+function editJob(idv){const j=data.jobs.find(x=>x.id===idv);if(!j)return;
+  const c=prompt('Company:',j.company||'');if(c===null)return;
+  const r=prompt('Role:',j.role||'');if(r===null)return;
+  const link=prompt('Link (optional):',j.link||'');if(link===null)return;
+  j.company=c.trim();j.role=r.trim();j.link=link.trim();save();renderCareer();toast('Application updated ✏️');}
+function editMonthGoal(mk,idv){const gs=data.goals[mk]||[];const g=gs.find(x=>x.id===idv);if(!g)return;
+  const v=prompt('Edit goal:',g.text||'');if(v===null)return;const nv=v.trim();if(!nv)return;g.text=nv;save();renderCareer();}
+function editNote(idv){const n=data.notes.find(x=>x.id===idv);if(!n)return;
+  const v=prompt('Edit note:',n.text||'');if(v===null)return;const nv=v.trim();if(!nv)return;n.text=nv;save();renderCareer();}
 
 // ---------- HOME DASHBOARD ----------
 function greeting(){const h=new Date().getHours();return h<12?'Good morning':h<17?'Good afternoon':h<21?'Good evening':'Good night';}
@@ -2399,8 +2480,9 @@ function renderWeekend(){
   [['sat','satList'],['sun','sunList']].forEach(([key,listId])=>{
     const ul=document.getElementById(listId);ul.innerHTML='';
     wk[key].forEach(t=>{total++;if(t.done)done++;const li=document.createElement('li');if(t.done)li.className='done';
-      li.innerHTML=`<div class="tk">${t.done?'✓':''}</div><span style="flex:1">${t.text.replace(/</g,'&lt;')}</span><button class="del">✕</button>`;
+      li.innerHTML=`<div class="tk">${t.done?'✓':''}</div><span style="flex:1">${t.text.replace(/</g,'&lt;')}</span><button class="edit">✎</button><button class="del">✕</button>`;
       li.querySelector('.tk').onclick=()=>{t.done=!t.done;save();renderWeekend();if(t.done)toast('Nice! ✓');};
+      li.querySelector('.edit').onclick=()=>editWk(k,key,t.id);
       li.querySelector('.del').onclick=()=>{data.weekend[k][key]=wk[key].filter(x=>x.id!==t.id);save();renderWeekend();};
       ul.appendChild(li);});
   });
@@ -2412,6 +2494,8 @@ function renderWeekend(){
 }
 function addWk(dayKey){const inp=document.getElementById(dayKey+'Input'),v=inp.value.trim();if(!v)return;
   const k=wkKey(wkOffset),wk=ensureWk(k);wk[dayKey].push({id:nid(),text:v,done:false});inp.value='';save();renderWeekend();}
+function editWk(k,dayKey,idv){const arr=(data.weekend[k]&&data.weekend[k][dayKey])||[];const t=arr.find(x=>x.id===idv);if(!t)return;
+  const v=prompt('Edit plan:',t.text||'');if(v===null)return;const nv=v.trim();if(!nv)return;t.text=nv;save();renderWeekend();}
 
 // ---------- GYM ----------
 let gymDate=todayStr();
@@ -2498,10 +2582,11 @@ function renderGymToday(){
     let setsHtml='';
     ex.sets.forEach((st,si)=>{totalSets++;vol+=(st.reps||0)*(st.weight||0);
       setsHtml+=`<div class="gset"><span>Set ${si+1}</span><b>${st.reps||0}</b> reps × <b>${st.weight||0}</b> kg <span class="gvol">= ${(st.reps||0)*(st.weight||0)} kg</span><button class="del" data-si="${si}">✕</button></div>`;});
-    card.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h4>${ex.name.replace(/</g,'&lt;')}</h4><button class="chip" title="Remove exercise">🗑️</button></div>`+
+    card.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h4>${ex.name.replace(/</g,'&lt;')}</h4><div style="display:flex;gap:6px"><button class="chip gedit" title="Rename exercise">✎</button><button class="chip grm" title="Remove exercise">🗑️</button></div></div>`+
       `<div class="gsets">${setsHtml||'<div class="mini" style="text-align:left">No sets yet — add your first set below.</div>'}</div>`+
       `<div class="todo-add" style="margin-top:8px"><input type="number" min="0" placeholder="reps" class="tsel grp"/><input type="number" min="0" step="0.5" placeholder="kg" class="tsel gwt"/><button class="btn ghost sm gadd">Add set</button></div>`;
-    card.querySelector('.chip').onclick=()=>{log.exercises.splice(ei,1);save();renderGymToday();};
+    card.querySelector('.grm').onclick=()=>{log.exercises.splice(ei,1);save();renderGymToday();};
+    card.querySelector('.gedit').onclick=()=>{const v=prompt('Exercise name:',ex.name||'');if(v===null)return;const nv=v.trim();if(!nv)return;ex.name=nv;save();renderGymToday();};
     card.querySelector('.gadd').onclick=()=>{const r=parseInt(card.querySelector('.grp').value)||0;const w=parseFloat(card.querySelector('.gwt').value)||0;if(!r&&!w){toast('Enter reps or weight');return;}ex.sets.push({reps:r,weight:w});data.gym.attend[gymDate]=true;save();renderGymToday();renderGymAttend();};
     card.querySelectorAll('.gset .del').forEach(btn=>btn.onclick=()=>{ex.sets.splice(parseInt(btn.dataset.si),1);save();renderGymToday();});
     list.appendChild(card);
